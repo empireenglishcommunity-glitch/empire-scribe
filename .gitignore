@@ -1,0 +1,12 @@
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node (html2img service)
+node_modules/
+npm-debug.log*
