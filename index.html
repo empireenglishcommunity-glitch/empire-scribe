@@ -443,7 +443,7 @@ textarea::placeholder,input::placeholder{color:rgba(139,145,154,0.5)}
       <div class="done-icon">👑</div>
       <div class="done-badge">EMPIRE ENGLISH COMMUNITY</div>
       <h2 id="done_name">أهلًا بيك!</h2>
-      <p>إجاباتك اتسجّلت بنجاح ✅<br>البوستر بتاع أهدافك هيوصلك على تيليجرام خلال ثواني 🎨<br><span style="font-size:12px;color:var(--gold-muted)">علّقه في مكان تشوفه كل يوم!</span></p>
+      <p>إجاباتك اتسجّلت بنجاح ✅<br>شكرًا ليك على وقتك وصدقك معانا 🙏</p>
       <div class="send-status" id="send_status"></div>
     </div>
   </div>
@@ -605,7 +605,7 @@ function submitForm() {
   }).then(function(r) {
     if (r.ok) {
       st.className = 'send-status success';
-      st.textContent = '✅ تم بنجاح! البوستر هيوصلك على تيليجرام خلال ثواني 🎨';
+      st.textContent = '✅ شكرًا ليك! تم تسجيل إجاباتك بنجاح 🎉';
       // Close Telegram WebApp after short delay
       if (isFromTelegram && window.Telegram && window.Telegram.WebApp) {
         setTimeout(function() {
