@@ -1,60 +1,64 @@
 # Empire Scribe — Setup Guide
 
-## How It Works (Updated Flow)
+## How It Works
 
 ```
 Student fills form (index.html)
         ↓
-Form POSTs answers to n8n webhook
+Form POSTs answers to Cloudflare Worker
         ↓
-n8n formats all answers into a clean message
+Worker formats message & sends to Telegram Bot API (token hidden)
         ↓
-Message is sent to YOUR Telegram (admin)
+You receive all answers on your Telegram
         ↓
 You create the poster manually and send it back
 ```
 
-No more HTML→Image service needed. No more broken poster pipeline.
+No bot token exposed in the frontend. No n8n. No extra services.
 
 ---
 
-## What You Need To Configure in n8n
+## Deploy the Cloudflare Worker (one-time setup)
 
-### 1. Import the Workflow
+### 1. Install Wrangler (if you don't have it)
 
-1. Open your n8n instance (e.g. `https://bot.empireenglish.online`)
-2. Go to **Workflows → Import from File**
-3. Upload `n8n-workflow-goal-poster.json`
-4. The workflow will appear as **"Empire Goal Form → Telegram Admin"**
+```bash
+npm install -g wrangler
+wrangler login
+```
 
-### 2. Set Up Telegram Bot Credentials
+### 2. Deploy the worker
 
-1. In n8n, go to **Settings → Credentials**
-2. Create a new **Telegram API** credential named `Empire Bot`
-3. Paste your bot token (get one from [@BotFather](https://t.me/BotFather) if you don't have one)
+```bash
+cd worker
+wrangler deploy
+```
 
-### 3. Set Your Admin Chat ID
+This gives you a URL like: `https://empire-goal-form.YOUR-SUBDOMAIN.workers.dev`
 
-The workflow sends all student answers to your personal Telegram (or a group).
+### 3. Set the secrets (bot token + chat ID)
 
-**To find your chat ID:**
-- Message [@userinfobot](https://t.me/userinfobot) on Telegram — it will reply with your numeric ID
-- Or use [@RawDataBot](https://t.me/RawDataBot)
+```bash
+wrangler secret put TG_BOT_TOKEN
+# When prompted, paste: 8677727344:AAFaWQa6ZGXt6qVkcCNOnOAoI3r9KkoVF14
 
-**Then in n8n:**
+wrangler secret put TG_CHAT_ID
+# When prompted, paste: 8355378781
+```
 
-Option A — Environment Variable (recommended):
-- Set `EMPIRE_ADMIN_CHAT_ID` in your n8n environment (docker-compose, .env, etc.)
+### 4. Update the Worker URL in index.html (if different)
 
-Option B — Hardcode in the workflow:
-- Open the **"Send to Admin Telegram"** node
-- Replace `{{ $env.EMPIRE_ADMIN_CHAT_ID }}` with your numeric chat ID (e.g. `123456789`)
+In `index.html`, find this line:
+```javascript
+var WORKER_URL = "https://empire-goal-form.empireenglishcommunity-glitch.workers.dev";
+```
 
-### 4. Activate the Workflow
+Replace it with your actual worker URL from step 2.
 
-- Open the workflow in n8n
-- Toggle the **Active** switch ON (top right)
-- The webhook URL will be: `https://bot.empireenglish.online/webhook/goal-form`
+### 5. (Optional) Add custom domain
+
+In Cloudflare Dashboard → Workers → empire-goal-form → Settings → Triggers → Custom Domains:
+- Add `goals-api.empireenglish.online` (or any subdomain you prefer)
 
 ---
 
@@ -92,8 +96,10 @@ Every time a student submits the form, you get a Telegram message like:
 | File | Purpose |
 |------|---------|
 | `index.html` | The student-facing goal form (deployed to goals.empireenglish.online) |
-| `n8n-workflow-goal-poster.json` | n8n workflow — import this into your n8n |
-| `html2img/` | OLD poster image service — no longer needed, can be removed |
+| `worker/worker.js` | Cloudflare Worker — proxies form data to Telegram securely |
+| `worker/wrangler.toml` | Worker config for deployment |
+| `n8n-workflow-goal-poster.json` | DEPRECATED — no longer needed |
+| `html2img/` | DEPRECATED — no longer needed |
 
 ---
 
@@ -101,13 +107,18 @@ Every time a student submits the form, you get a Telegram message like:
 
 | Problem | Fix |
 |---------|-----|
-| Student submits but you don't get a message | Check workflow is **active** in n8n. Check the n8n execution log for errors. |
-| "Unauthorized" error in n8n | Bot token is wrong or expired. Regenerate from @BotFather. |
-| "Chat not found" error | Your chat ID is wrong. Make sure you've messaged your bot at least once (bots can't initiate conversations). |
-| Form shows "⚠️ فيه مشكلة" | The n8n webhook URL isn't reachable. Check that `https://bot.empireenglish.online/webhook/goal-form` is up. |
+| Student submits but you don't get a message | Check worker logs: `wrangler tail` — look for errors |
+| "Telegram delivery failed" in worker logs | Bot token is wrong or expired. Re-set: `wrangler secret put TG_BOT_TOKEN` |
+| "Chat not found" in worker logs | Make sure you've messaged @empire_ops_eec_bot at least once |
+| CORS errors in browser console | Worker already handles CORS — make sure you deployed latest version |
+| Form shows "⚠️ فيه مشكلة" | Worker URL is wrong in index.html, or worker isn't deployed |
 
 ---
 
-## Optional: Remove html2img
+## Security
 
-The `html2img/` folder contains the old Puppeteer-based poster generation service. It's no longer used in this flow. You can safely delete it or keep it for future use.
+- ✅ Bot token is stored as a Cloudflare secret (never in code/browser)
+- ✅ Chat ID is stored as a Cloudflare secret
+- ✅ Worker validates required fields before forwarding
+- ✅ HTML entities are escaped to prevent injection
+- ✅ Google Sheets backup still works (no-cors, fire-and-forget)

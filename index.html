@@ -499,8 +499,7 @@ var isFromTelegram = false;
 })();
 
 // ─── Form Logic ───
-var TG_BOT_TOKEN = "8677727344:AAFaWQa6ZGXt6qVkcCNOnOAoI3r9KkoVF14";
-var TG_CHAT_ID = "8355378781";
+var WORKER_URL = "https://empire-goal-form.empireenglishcommunity-glitch.workers.dev";
 var SHEET_URL = "https://script.google.com/macros/s/AKfycbxeDcXQputF2yvKIBy9O1dJUuIAEVGzYpmLGUCMvDHDsP3IIeewl_YmiZMvENzgnnme/exec";
 
 var cur = 1;
@@ -598,50 +597,21 @@ function submitForm() {
   st.className = 'send-status sending';
   st.textContent = '⏳ جاري إرسال بياناتك...';
 
-  // Build formatted Telegram message (HTML parse mode for safe formatting)
-  var tgUsername = answers.telegram_username ? '@' + answers.telegram_username : 'N/A';
-  var sourceLabel = answers.source === 'telegram_webapp' ? 'Telegram WebApp' : 'رابط مباشر';
-
-  var msg = '👑 <b>إجابة جديدة — Empire Goal Form</b>\n';
-  msg += '━━━━━━━━━━━━━━━━━━\n\n';
-  msg += '👤 <b>الاسم:</b> ' + answers.name + '\n';
-  msg += '🔗 <b>Telegram:</b> ' + tgUsername + '\n';
-  msg += '📍 <b>المصدر:</b> ' + sourceLabel + '\n';
-  msg += '🕐 <b>الوقت:</b> ' + answers.timestamp + '\n\n';
-  msg += '━━━━━━━━━━━━━━━━━━\n\n';
-  msg += '🎯 <b>هدفي الأساسي:</b>\n' + answers.goal + '\n\n';
-  msg += '💡 <b>ليه مهم:</b>\n' + answers.why + '\n\n';
-  msg += '✨ <b>لو حققت هدفي:</b>\n' + (answers.future || '—') + '\n\n';
-  msg += '⚠️ <b>لو ما التزمتش:</b>\n' + (answers.risk || '—') + '\n\n';
-  msg += '📊 <b>مستوى الجدية:</b> ' + answers.commitment_scale + '/10\n';
-  msg += '💬 <b>السبب:</b> ' + (answers.scale_reason || '—') + '\n\n';
-  msg += '🚧 <b>أكبر تحدي:</b>\n' + (answers.obstacle || '—') + '\n\n';
-  msg += '✊ <b>التزامي:</b>\n' + (answers.commitment || '—') + '\n\n';
-  msg += '☀️ <b>عادتي اليومية:</b>\n' + answers.habit + '\n\n';
-  msg += '💌 <b>رسالة لنفسي:</b>\n' + (answers.message || '—') + '\n\n';
-  msg += '━━━━━━━━━━━━━━━━━━\n';
-  msg += '🏛 Empire English Community';
-
-  // Send directly to Telegram Bot API
-  var tgUrl = 'https://api.telegram.org/bot' + TG_BOT_TOKEN + '/sendMessage';
-  fetch(tgUrl, {
+  // Send to Cloudflare Worker (which forwards to Telegram securely)
+  fetch(WORKER_URL, {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      chat_id: TG_CHAT_ID,
-      text: msg,
-      parse_mode: 'HTML'
-    })
+    body: JSON.stringify(answers)
   }).then(function(r) { return r.json(); })
   .then(function(data) {
-    if (data.ok) {
+    if (data.status === 'ok') {
       st.className = 'send-status success';
       st.textContent = '✅ تم تسجيل إجاباتك بنجاح — هنتواصل معاك قريب 🎉';
     } else {
-      throw new Error(data.description || 'Telegram error');
+      throw new Error(data.error || 'Send error');
     }
   }).catch(function(err) {
-    console.error('Telegram send error:', err);
+    console.error('Send error:', err);
     st.className = 'send-status failed';
     st.textContent = '⚠️ فيه مشكلة — لكن بياناتك اتسجلت. تواصل مع فريق EEC.';
   });
