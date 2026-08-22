@@ -499,8 +499,8 @@ var isFromTelegram = false;
 })();
 
 // ─── Form Logic ───
+var WORKER_URL = "https://empire-goal-form.empireenglishcommunity-glitch.workers.dev";
 var SHEET_URL = "https://script.google.com/macros/s/AKfycbxeDcXQputF2yvKIBy9O1dJUuIAEVGzYpmLGUCMvDHDsP3IIeewl_YmiZMvENzgnnme/exec";
-var N8N_WEBHOOK = "https://bot.empireenglish.online/webhook/goal-form";
 
 var cur = 1;
 var scaleVal = 0;
@@ -597,25 +597,21 @@ function submitForm() {
   st.className = 'send-status sending';
   st.textContent = '⏳ جاري إرسال بياناتك...';
 
-  // Send to n8n webhook (primary — triggers poster generation)
-  fetch(N8N_WEBHOOK, {
+  // Send to Cloudflare Worker (which forwards to Telegram securely)
+  fetch(WORKER_URL, {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify(answers)
-  }).then(function(r) {
-    if (r.ok) {
+  }).then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.status === 'ok') {
       st.className = 'send-status success';
       st.textContent = '✅ تم تسجيل إجاباتك بنجاح — هنتواصل معاك قريب 🎉';
-      // Close Telegram WebApp after short delay (optional)
-      if (isFromTelegram && window.Telegram && window.Telegram.WebApp) {
-        setTimeout(function() {
-          window.Telegram.WebApp.close();
-        }, 5000);
-      }
     } else {
-      throw new Error('not ok');
+      throw new Error(data.error || 'Send error');
     }
-  }).catch(function() {
+  }).catch(function(err) {
+    console.error('Send error:', err);
     st.className = 'send-status failed';
     st.textContent = '⚠️ فيه مشكلة — لكن بياناتك اتسجلت. تواصل مع فريق EEC.';
   });
