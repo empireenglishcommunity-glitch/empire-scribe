@@ -244,9 +244,66 @@ textarea::placeholder,input::placeholder{color:rgba(139,145,154,0.5)}
   .q-card{padding:1.4rem 1.2rem}
   .scale-btn{width:40px;height:40px;font-size:13px}
 }
+
+/* ─── Access Gate ─── */
+.gate-wrap{
+  max-width:420px;margin:0 auto;padding:2rem 1rem;
+  min-height:100vh;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  position:relative;z-index:1;
+}
+.gate-card{
+  background:var(--bg-card);border:1px solid rgba(212,175,55,0.15);
+  border-radius:16px;padding:2.5rem 2rem;text-align:center;width:100%;
+}
+.gate-card .hero-crown{font-size:48px;margin-bottom:1rem;animation:crownFloat 4s ease-in-out infinite}
+.gate-card h2{font-family:'Cairo',sans-serif;font-size:22px;font-weight:900;color:var(--gold);margin-bottom:.5rem}
+.gate-card p{font-family:'Cairo',sans-serif;font-size:14px;color:var(--text-secondary);line-height:1.8;margin-bottom:1.5rem}
+.gate-input{
+  width:100%;border:1.5px solid rgba(212,175,55,0.2);border-radius:10px;
+  padding:1rem;font-size:18px;font-family:'Cairo',sans-serif;
+  color:var(--text-primary);background:rgba(13,17,23,0.6);
+  text-align:center;letter-spacing:3px;font-weight:700;
+  transition:border-color .3s,box-shadow .3s;direction:ltr;
+}
+.gate-input:focus{
+  outline:none;border-color:var(--gold);
+  box-shadow:0 0 15px rgba(212,175,55,0.1),0 0 5px rgba(212,175,55,0.15);
+}
+.gate-btn{
+  width:100%;margin-top:1rem;background:linear-gradient(135deg,var(--gold),var(--bronze));
+  color:var(--bg-primary);border:none;border-radius:10px;
+  padding:1rem;font-size:16px;font-weight:700;cursor:pointer;
+  font-family:'Cairo',sans-serif;transition:all .2s;
+  box-shadow:0 4px 15px rgba(212,175,55,0.2);
+}
+.gate-btn:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(212,175,55,0.35)}
+.gate-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+.gate-err{
+  font-family:'Cairo',sans-serif;font-size:13px;color:#e74c3c;
+  margin-top:.75rem;display:none;padding:.5rem .8rem;
+  background:rgba(231,76,60,0.08);border:1px solid rgba(231,76,60,0.15);
+  border-radius:8px;
+}
+.form-container{display:none}
 </style>
 </head>
 <body>
+
+<!-- Access Gate -->
+<div class="gate-wrap" id="gate">
+  <div class="gate-card">
+    <div class="hero-crown">👑</div>
+    <h2>Empire English Community</h2>
+    <p>الصفحة دي محمية — اكتب كود الدخول اللي اتبعتلك</p>
+    <input type="text" class="gate-input" id="gate_code" placeholder="اكتب الكود هنا" maxlength="20" autocomplete="off">
+    <button class="gate-btn" id="gate_btn" onclick="verifyCode()">دخول 🔓</button>
+    <div class="gate-err" id="gate_err">✗ الكود غلط — تأكد من الكود وحاول تاني</div>
+  </div>
+</div>
+
+<!-- Main Form (hidden until code verified) -->
+<div class="form-container" id="form_container">
 
 <!-- Floating Particles -->
 <div class="particles" id="particles"></div>
@@ -598,6 +655,7 @@ function submitForm() {
   st.textContent = '⏳ جاري إرسال بياناتك...';
 
   // Send to Cloudflare Worker (which forwards to Telegram securely)
+  answers._code = sessionStorage.getItem('eec_access_code') || '';
   fetch(WORKER_URL, {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
@@ -625,6 +683,63 @@ function submitForm() {
   }).catch(function(){});
 }
 </script>
+
+</div><!-- end form-container -->
+
+<script>
+// ─── Access Gate Logic ───
+var WORKER_URL_VERIFY = "https://empire-goal-form.empireenglishcommunity.workers.dev/verify";
+
+// Check if already verified this session
+(function checkSession() {
+  var saved = sessionStorage.getItem('eec_access_code');
+  if (saved) {
+    unlockForm();
+  }
+})();
+
+// Enter key support
+document.getElementById('gate_code').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') verifyCode();
+});
+
+function verifyCode() {
+  var code = document.getElementById('gate_code').value.trim();
+  if (!code) return;
+
+  var btn = document.getElementById('gate_btn');
+  var err = document.getElementById('gate_err');
+  btn.disabled = true;
+  btn.textContent = 'جاري التحقق...';
+  err.style.display = 'none';
+
+  fetch(WORKER_URL_VERIFY, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ code: code })
+  }).then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.valid) {
+      sessionStorage.setItem('eec_access_code', code);
+      unlockForm();
+    } else {
+      err.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'دخول 🔓';
+    }
+  }).catch(function() {
+    err.textContent = '⚠️ فيه مشكلة في الاتصال — حاول تاني';
+    err.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'دخول 🔓';
+  });
+}
+
+function unlockForm() {
+  document.getElementById('gate').style.display = 'none';
+  document.getElementById('form_container').style.display = 'block';
+}
 </script>
+
 </body>
-</html><!-- deployed 2026-06-30T00:30:30Z -->
+</html>
