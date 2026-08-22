@@ -443,7 +443,7 @@ textarea::placeholder,input::placeholder{color:rgba(139,145,154,0.5)}
       <div class="done-icon">👑</div>
       <div class="done-badge">EMPIRE ENGLISH COMMUNITY</div>
       <h2 id="done_name">أهلًا بيك!</h2>
-      <p>إجاباتك اتسجّلت بنجاح ✅<br>شكرًا ليك على وقتك وصدقك معانا 🙏</p>
+      <p>إجاباتك اتسجّلت بنجاح ✅<br>شكرًا ليك على وقتك وصدقك معانا 🙏<br>هنتواصل معاك قريب ونبعتلك البوستر بتاعك 🎨</p>
       <div class="send-status" id="send_status"></div>
     </div>
   </div>
@@ -595,7 +595,7 @@ function submitForm() {
 
   var st = document.getElementById('send_status');
   st.className = 'send-status sending';
-  st.textContent = '⏳ جاري إرسال بياناتك وتحضير البوستر...';
+  st.textContent = '⏳ جاري إرسال بياناتك...';
 
   // Send to n8n webhook (primary — triggers poster generation)
   fetch(N8N_WEBHOOK, {
@@ -605,12 +605,12 @@ function submitForm() {
   }).then(function(r) {
     if (r.ok) {
       st.className = 'send-status success';
-      st.textContent = '✅ شكرًا ليك! تم تسجيل إجاباتك بنجاح 🎉';
-      // Close Telegram WebApp after short delay
+      st.textContent = '✅ تم تسجيل إجاباتك بنجاح — هنتواصل معاك قريب 🎉';
+      // Close Telegram WebApp after short delay (optional)
       if (isFromTelegram && window.Telegram && window.Telegram.WebApp) {
         setTimeout(function() {
           window.Telegram.WebApp.close();
-        }, 3000);
+        }, 5000);
       }
     } else {
       throw new Error('not ok');
