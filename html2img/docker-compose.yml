@@ -4,6 +4,18 @@ services:
     build: .
     container_name: empire-html2img
     restart: unless-stopped
+    # Cap container logs. Docker's json-file driver is UNBOUNDED by default, and this
+    # host has no /etc/docker/daemon.json setting a global default, so a service that
+    # does not declare limits here can grow until the disk fills — with nothing to warn
+    # you first. 10m x 3 matches the convention already used by the learning bot, n8n,
+    # the assessment app, atlas and nutq-scorer, so this is the house standard rather
+    # than a new number. Audited 2026-08-31: html2img and eec-web were the only two of
+    # eleven running containers still uncapped.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     ports:
       - "3200:3200"
     environment:
